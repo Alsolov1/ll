@@ -164,6 +164,34 @@
       });
     }
 
+    // Convert common Google Drive sharing links into an image URL.
+    // The Drive file must be shared as: Anyone with the link (Viewer).
+    function normalizeProductImageUrl(value) {
+      const url = String(value || '').trim();
+      if (!url) return '';
+
+      try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.toLowerCase();
+
+        if (host === 'drive.google.com' || host === 'www.drive.google.com') {
+          let fileId = '';
+          const filePathMatch = parsed.pathname.match(/\/file\/d\/([^/]+)/);
+          if (filePathMatch) fileId = filePathMatch[1];
+          if (!fileId) fileId = parsed.searchParams.get('id') || '';
+          if (fileId) {
+            return 'https://drive.google.com/uc?export=view&id=' + encodeURIComponent(fileId);
+          }
+        }
+
+        // Keep other valid URLs (for example, image URLs hosted on a website) unchanged.
+        if (parsed.protocol === 'https:' || parsed.protocol === 'http:') return url;
+        return '';
+      } catch (error) {
+        return '';
+      }
+    }
+
     function categoryKey(value) {
       const text = String(value || 'accessoires').trim().toLowerCase();
       const map = {
@@ -202,7 +230,7 @@
         products[id] = {
           name,
           price,
-          image: String(row.image || '').trim(),
+          image: normalizeProductImageUrl(row.image),
           category: categoryKey(row.category),
           description: String(row.description || '').trim(),
           stock: row.stock === undefined || row.stock === '' ? '' : Number(row.stock)
